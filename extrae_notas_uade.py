@@ -23,11 +23,12 @@ def opcion(texto='Si o no?: '):
         elif op in no:
             x = 0
             break
+        else:
+            print('Si o no?\n')
     return x
 
 def timer(func):
     'Prints function runtime'
-
     def wrapper():
         time1 = datetime.now()
         func()
@@ -37,29 +38,40 @@ def timer(func):
     return wrapper
 
 def login(driver, url, usr, psw):
-
+    '''Logs in to the UADE webcampus profile
+    
+    Receives oper chromedriver.exe, login page url, user and password'''
+    if not psw.endswith('\n'): psw += '\n'
     driver.get(url)
     driver.find_element_by_id('ctl00_ContentPlaceHolderMain_txtUser').send_keys(usr)
     driver.find_element_by_id('ctl00_ContentPlaceHolderMain_txtClave1').send_keys(psw)
     driver.get(driver.current_url)
     if driver.current_url == url:
-        raise PermissionError('Login failed.')
+        raise PermissionError("Login failed. Please verify that you're using the correct user/password.")
 
 def logout(driver):
-
+    'Signs off UADE user'
     driver.find_element_by_id('ctl00_Top1_lnkCerrarSesion').click()
 
 def kill():
+    'Kill the script exceution'
     print('\n\n* Se finalizara el programa.')
     exit()
 
 def notesExtract(table):
+    '''Extract grades from the "cuatrimestre" page
+    
+    Table = HTML table grades section'''
     grades = []
     for grade in table.findAll('td', class_='td-texbox'):
         grades.append(grade.text)
     return grades
     
 def classInfoExtract(driver, url):
+    '''Extract the info from the "cuatrimestre" page
+    
+    Returns classes (list), grades (matrix n_rows = len(classes))
+    period (str with name of semester).'''
 
     driver.get(url)
     soup = BeautifulSoup(driver.page_source, features="html.parser")
@@ -67,19 +79,27 @@ def classInfoExtract(driver, url):
     classes = []
     grades_list = []
 
-    period = soup.find('tr', class_='td-ADMdoc-REG').text
+    period = soup.find('tr', class_='td-ADMdoc-REG').text # Name of semester
     
-    for classroom in soup.findAll('tr', class_="td-AULA-bkg"):
+    for classroom in soup.findAll('tr', class_="td-AULA-bkg"):  # Classroom table
         name = classroom.find('a').text
         
-        grades_table = classroom.find('td', class_='tabla-ID2').findAll('tr')[1]
-        grades= notesExtract(grades_table)
+        grades_table = classroom.find('td', class_='tabla-ID2').findAll('tr')[1] # Position 1 has the grades, position 0 the header
+        grades = notesExtract(grades_table)
 
         classes.append(name)
         grades_list.append(grades)
     return classes, grades_list, period
 
 def createExcel(class_matrix, header, file_name='Notas_UADE.xlsx'):
+    '''Exports Class info to xlsx, requires pandas' ExcelWriter and DataFrame
+    
+    Receives:
+    - class_matrix: each row containing: [class_info (names list), grades (matrix),
+    sheet (str with desired excel sheet name), title (str with title for the first cel)
+    - header: list containing the titles for the grades table
+    - file_name: optional, default = 'Notas_UADE.xlsx
+    '''
 
     with ExcelWriter(file_name, mode='w+') as writer:
         for row in class_matrix:
@@ -93,6 +113,9 @@ def createExcel(class_matrix, header, file_name='Notas_UADE.xlsx'):
     writer.close()
 
 def classMatrixCreate(driver, links):
+    ''' Create class info matrix: each row containing: [class_info (names list), grades (matrix),
+    sheet (str with desired excel sheet name), title (str with title for the first cel)
+    '''
     matrix = []
     for link in links:
         url = r'https://www.webcampus.uade.edu.ar/' + link
@@ -105,6 +128,7 @@ def classMatrixCreate(driver, links):
     return matrix
 
 def sameType(matrix, col):
+    "Checks that every item in matrix's column is the same type."
     prev_item = matrix[0][col]
     for i in range(1, len(matrix)):
         if type(matrix[i][col]) != type(prev_item):
@@ -115,6 +139,7 @@ def sameType(matrix, col):
     return False
     
 def matrizxIsUniform(matrix):
+    "Determines if a given matrix contains uniform data types"
     cols = len(matrix[0])
     for i in range(cols):
         if not sameType(matrix, i):
@@ -125,7 +150,7 @@ def matrizxIsUniform(matrix):
         
 
 def semestersExtract(driver):
-    
+    "Extract current and past semesters urls from webcampus' home"
     links = []
     soup = BeautifulSoup(driver.page_source, features="html.parser")
 
@@ -139,6 +164,7 @@ def semestersExtract(driver):
 
 @timer
 def __main__():
+
     url = r'https://www.webcampus.uade.edu.ar/Login.aspx'
     driver_path = r"C:\Apps\chromedriver_win32\chromedriver.exe"
     while not os.path.isfile(driver_path):
@@ -157,11 +183,10 @@ def __main__():
             try:
                 with open(creds_file, 'r') as creds:
                     usr, psw = creds.readline().split(';')
-                    
 
             except FileNotFoundError:
                 print(f'No se encontro el archivo "{creds_file}".')
-                print(f'\nSe recomienda crear una archivo llamado "{creds_file}" que contenga\
+                print(f'\nSe recomienda crear un archivo llamado "{creds_file}" que contenga\
                     \nel usuario y la contraseña separados por un punto y coma ";"\n')
                 
                 if opcion("Desea ingresarlos manualmente?: "):
@@ -169,13 +194,12 @@ def __main__():
                     psw = input('Ingrese su contraseña: ')
                 else:
                     kill()
-            finally:
-                if not psw.endswith('\n'): psw += '\n'
             try:
                 login(driver, url, usr, psw)
                 break
+
             except PermissionError as e:
-                print(f'\n* El inicio de sesion fallo: {"str(e)"}')
+                print(f'\n* El inicio de sesion fallo: "{str(e)}"')
                 if opcion('Desea intentarlo de nuevo?: '):
                     continue
                 else:
@@ -195,7 +219,7 @@ def __main__():
             raise RuntimeError('No se logro extraer ningun enlace a cuatrimestre cursado.')
 
     except RuntimeError as e:
-        print(f'> Ocurrio un error durante la ejecucion del programa:  "{str(e)}"')
+        print(f'> Ocurrio un error durante la ejecucion del programa: "{str(e)}"')
     except Exception as e:
         print(f'> Error fatal inesperado: "{str(e)}"')
     else:
