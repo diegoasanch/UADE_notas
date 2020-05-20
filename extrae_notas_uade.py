@@ -12,11 +12,11 @@ try:
     from pandas import ExcelWriter, DataFrame
 
 except ImportError as error:
-    MODS = ['beautifulsoup4', 'pandas', 'selenium']
+    MODULES = ['beautifulsoup4', 'pandas', 'selenium']
     print(f'Error: {error}')
     print('\n*Ocurrio un error al importar los modulos necesarios.')
     print('Asegurese de tener instalados por "pip install ..." los modulos:\n')
-    for mod in MODS:
+    for mod in MODULES:
         print('-' + mod)
     sys.exit()
 
@@ -79,7 +79,10 @@ def extract_notes(table):
     '''
     grades = []
     for grade in table.findAll('td', class_='td-texbox'):
-        grades.append(grade.text)
+        grad = grade.text
+        if grad.isdigit():
+            grad = int(grad)
+        grades.append(grad)
     return grades
 
 def extract_class_info(driver, url):
@@ -98,7 +101,7 @@ def extract_class_info(driver, url):
     for classroom in soup.findAll('tr', class_="td-AULA-bkg"):  # Classroom table
         name = classroom.find('a').text.split('-')[0].strip()
         grades_table = classroom.find('td', class_='tabla-ID2').findAll('tr')[1]
-        # Position 1 has the grades, position 0 the header
+        # Position 0 has the header, position 1 the grades
         grades = extract_notes(grades_table)
 
         classes.append(name)
@@ -110,7 +113,7 @@ def create_excel(class_matrix, header, student, file_name='Notas_UADE.xlsx'):
 
     Receives:
     - class_matrix: each row containing: [class_info (names list), grades (matrix),
-    sheet (str with desired excel sheet name), title (str with title for the first cel)
+    sheet (str with desired excel sheet name), title (str with title for the first cell)
     - header: list containing the titles for the grades table
     - student: str, student name
     - file_name: optional, default = 'Notas_UADE.xlsx
@@ -129,7 +132,7 @@ def create_excel(class_matrix, header, student, file_name='Notas_UADE.xlsx'):
 
 def create_class_matrix(driver, links):
     ''' Create class info matrix: each row containing: [class_info (names list), grades (matrix),
-    sheet (str with desired excel sheet name), title (str with title for the first cel)
+    sheet (str with desired excel sheet name), title (str with title for the first cell)
     '''
     matrix = []
     for link in links:
@@ -166,7 +169,7 @@ def uniform_matrix(matrix):
 
 def name_extract(driver):
     """Receives chromedriver on webcampus' homepage
-    Returns name, lastname. (both str)
+    Returns name (str)
     """
     soup = BeautifulSoup(driver.page_source, features="html.parser")
     name = soup.find('span', class_="TOPnombre").text.strip('Bienvenido')
@@ -237,7 +240,7 @@ def __main__():
                 kill_driver(driver)
                 kill()
 
-        st_name = name_extract(driver) # Studen name format lastname, name
+        st_name = name_extract(driver) # Student name format lastname, name
         excel_filename = create_filename(st_name)
         links = extract_links(driver)
         if links != []:
