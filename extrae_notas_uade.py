@@ -49,15 +49,39 @@ def login(driver, url, usr, psw):
     '''Logs in to the UADE webcampus profile
 
     Receives oper chromedriver.exe, login page url, user and password'''
+    home_page = "HomeWC.aspx"
     if not psw.endswith('\n'):
         psw += '\n'
     driver.get(url)
     driver.find_element_by_id('ctl00_ContentPlaceHolderMain_txtUser').send_keys(usr)
     driver.find_element_by_id('ctl00_ContentPlaceHolderMain_txtClave1').send_keys(psw)
     driver.get(driver.current_url) # waits for the new url to load before proceeding
-    if driver.current_url == url:  # if no page change is detected
+    if driver.current_url == url:
         raise PermissionError("'Login failed. Please verify that you're using the \
 correct user/password.'")
+    elif not driver.current_url.endswith(home_page):
+        warnings_bypass(driver, home_page)# If logged in but not on homepage
+
+def warnings_bypass(driver, homepage, tries=3):
+    'Bypass the webcampus debt/ads screens'
+    warning_buttons = [
+        'ctl00_ContentPlaceHolderMain_SalteaPublicidad_Button1',
+        'ctl00_ContentPlaceHolderMain_BtnContinuarWC']
+    for i in range(tries):
+        for button in warning_buttons:
+            try:
+                driver.find_element_by_id(button).click()
+            except:
+                pass
+            finally:
+                if driver.current_url.endswith(homepage):
+                    break
+        else:
+            continue
+        break
+    else:
+        raise PermissionError("'Login failed. Could not make it past the \
+warnings screen'")
 
 def logout(driver):
     'Signs off UADE user'
