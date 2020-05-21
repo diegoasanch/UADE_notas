@@ -12,11 +12,11 @@ try:
     from pandas import ExcelWriter, DataFrame
 
 except ImportError as error:
-    MODULES = ['beautifulsoup4', 'pandas', 'selenium']
+    MODS = ['beautifulsoup4', 'pandas', 'selenium']
     print(f'Error: {error}')
     print('\n*Ocurrio un error al importar los modulos necesarios.')
     print('Asegurese de tener instalados por "pip install ..." los modulos:\n')
-    for mod in MODULES:
+    for mod in MODS:
         print('-' + mod)
     sys.exit()
 
@@ -56,11 +56,11 @@ def login(driver, url, usr, psw):
     driver.find_element_by_id('ctl00_ContentPlaceHolderMain_txtUser').send_keys(usr)
     driver.find_element_by_id('ctl00_ContentPlaceHolderMain_txtClave1').send_keys(psw)
     driver.get(driver.current_url) # waits for the new url to load before proceeding
-    if driver.current_url == url:
+    if driver.current_url == url: # If no page change is detected
         raise PermissionError("'Login failed. Please verify that you're using the \
 correct user/password.'")
     elif not driver.current_url.endswith(home_page):
-        warnings_bypass(driver, home_page)# If logged in but not on homepage
+        warnings_bypass(driver, home_page) # If logged in but not on homepage
 
 def warnings_bypass(driver, homepage, tries=3):
     'Bypass the webcampus debt/ads screens'
@@ -103,10 +103,7 @@ def extract_notes(table):
     '''
     grades = []
     for grade in table.findAll('td', class_='td-texbox'):
-        grad = grade.text
-        if grad.isdigit():
-            grad = int(grad)
-        grades.append(grad)
+        grades.append(grade.text)
     return grades
 
 def extract_class_info(driver, url):
@@ -125,7 +122,7 @@ def extract_class_info(driver, url):
     for classroom in soup.findAll('tr', class_="td-AULA-bkg"):  # Classroom table
         name = classroom.find('a').text.split('-')[0].strip()
         grades_table = classroom.find('td', class_='tabla-ID2').findAll('tr')[1]
-        # Position 0 has the header, position 1 the grades
+        # Position 1 has the grades, position 0 the header
         grades = extract_notes(grades_table)
 
         classes.append(name)
@@ -137,7 +134,7 @@ def create_excel(class_matrix, header, student, file_name='Notas_UADE.xlsx'):
 
     Receives:
     - class_matrix: each row containing: [class_info (names list), grades (matrix),
-    sheet (str with desired excel sheet name), title (str with title for the first cell)
+    sheet (str with desired excel sheet name), title (str with title for the first cel)
     - header: list containing the titles for the grades table
     - student: str, student name
     - file_name: optional, default = 'Notas_UADE.xlsx
@@ -156,7 +153,7 @@ def create_excel(class_matrix, header, student, file_name='Notas_UADE.xlsx'):
 
 def create_class_matrix(driver, links):
     ''' Create class info matrix: each row containing: [class_info (names list), grades (matrix),
-    sheet (str with desired excel sheet name), title (str with title for the first cell)
+    sheet (str with desired excel sheet name), title (str with title for the first cel)
     '''
     matrix = []
     for link in links:
@@ -193,7 +190,7 @@ def uniform_matrix(matrix):
 
 def name_extract(driver):
     """Receives chromedriver on webcampus' homepage
-    Returns name (str)
+    Returns name, lastname. (both str)
     """
     soup = BeautifulSoup(driver.page_source, features="html.parser")
     name = soup.find('span', class_="TOPnombre").text.strip('Bienvenido')
@@ -224,14 +221,14 @@ def extract_links(driver):
 def __main__():
 
     url = r'https://www.webcampus.uade.edu.ar/Login.aspx'
-    driver_path = r"C:\Apps\chromedriver_win32\chromedriver.exe"
+    driver_path = r"C:\Apps\chromedriver_win32\chromedriver.xe"
     while not os.path.isfile(driver_path):
         driver_website = r"https://sites.google.com/a/chromium.org/chromedriver/home"
         print(f'El webdriver de chrome no se encotro en la direccion "{driver_path}"\n')
         print(f'Link para la descarga del chrome web driver: "{driver_website}"')
 
         if opcion('\nDesea ingresar la direccion manualmente?: '):
-            driver_path = input("Ingrese la direccion completa del chromedriver.exe: ")
+            driver_path = input("Ingrese la direccion completa del chromedriver.exe: ").strip('"')
         else:
             kill()
 
@@ -264,7 +261,7 @@ def __main__():
                 kill_driver(driver)
                 kill()
 
-        st_name = name_extract(driver) # Student name format lastname, name
+        st_name = name_extract(driver) # Studen name format lastname, name
         excel_filename = create_filename(st_name)
         links = extract_links(driver)
         if links != []:
