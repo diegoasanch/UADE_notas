@@ -1,6 +1,6 @@
 # Exportador de notas del webcampus de UADE a xlsx #
 
-Inicia sesion en tu cuenta de UADE webcampus y extrae la informacion de cuatrimestres cursados y notas obtenidas, y luego exportandola a
+Inicia sesion en tu cuenta de UADE webcampus y extrae la informacion de cuatrimestres cursados y notas obtenidas, luego exportandola a
 un archivo xlsx.
 
 Requiere tener instalados los modulos:
