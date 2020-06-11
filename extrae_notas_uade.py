@@ -45,6 +45,10 @@ def timer(func):
 
     return wrapper
 
+def wait_load(driver):
+    'Waits for the new url to load before proceeding'
+    driver.get(driver.current_url)
+
 def login(driver, url, usr, psw):
     '''Logs in to the UADE webcampus profile
 
@@ -55,14 +59,14 @@ def login(driver, url, usr, psw):
     driver.get(url)
     driver.find_element_by_id('ctl00_ContentPlaceHolderMain_txtUser').send_keys(usr)
     driver.find_element_by_id('ctl00_ContentPlaceHolderMain_txtClave1').send_keys(psw)
-    driver.get(driver.current_url) # waits for the new url to load before proceeding
+    wait_load(driver)
     if driver.current_url == url: # If no page change is detected
         raise PermissionError("'Login failed. Please verify that you're using the \
 correct user/password.'")
     elif not driver.current_url.endswith(home_page):
         warnings_bypass(driver, home_page) # If logged in but not on homepage
 
-def warnings_bypass(driver, homepage, tries=3):
+def warnings_bypass(driver, homepage, tries=5):
     'Bypass the webcampus debt/ads screens'
     warning_buttons = [
         'ctl00_ContentPlaceHolderMain_SalteaPublicidad_Button1',
@@ -75,6 +79,7 @@ def warnings_bypass(driver, homepage, tries=3):
                 pass
             finally:
                 if driver.current_url.endswith(homepage):
+                    wait_load(driver)
                     break
         else:
             continue
@@ -221,7 +226,7 @@ def extract_links(driver):
 def __main__():
 
     url = r'https://www.webcampus.uade.edu.ar/Login.aspx'
-    driver_path = r"C:\Apps\chromedriver_win32\chromedriver.xe"
+    driver_path = r"C:\Apps\chromedriver_win32\chromedriver.exe"
     while not os.path.isfile(driver_path):
         driver_website = r"https://sites.google.com/a/chromium.org/chromedriver/home"
         print(f'El webdriver de chrome no se encotro en la direccion "{driver_path}"\n')
